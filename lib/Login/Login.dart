@@ -3,10 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class LoginPage extends StatefulWidget {
-  final Function loginUser;
-
-  LoginPage({required this.loginUser});
-
   @override
   _LoginPageState createState() => _LoginPageState();
 }
@@ -107,12 +103,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
               SizedBox(height: 20),
               ElevatedButton(
-                onPressed: () {
-                  widget.loginUser(
-                    _emailController.text,
-                    _passwordController.text,
-                  );
-                },
+                onPressed: _signInWithEmailAndPassword,
                 child: Text('Login'),
               ),
               SizedBox(height: 20),

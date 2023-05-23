@@ -1,10 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:flutter_form_builder/flutter_form_builder.dart';
 
 class UpdateProfile extends StatefulWidget {
   @override
@@ -12,130 +8,153 @@ class UpdateProfile extends StatefulWidget {
 }
 
 class _UpdateProfileState extends State<UpdateProfile> {
-  final _formKey = GlobalKey<FormBuilderState>();
-  File? _profilePicture;
-  File? _coverPicture;
-  final picker = ImagePicker();
-  bool _isLoading = false;
+  TextEditingController displayNameController = TextEditingController();
+  TextEditingController titleController = TextEditingController();
+  TextEditingController bioController = TextEditingController();
+
+  File? profilePicture;
+  File? coverPicture;
+
+  String? profilePicturePreview;
+  String? coverPicturePreview;
+
+  bool loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchUserData();
+  }
+
+  void fetchUserData() async {
+    // Fetch user data and set the initial state
+  }
+
+  void handleChange(String name, String value) {
+    setState(() {
+      if (name == 'displayName') {
+        displayNameController.text = value;
+      } else if (name == 'title') {
+        titleController.text = value;
+      } else if (name == 'bio') {
+        bioController.text = value;
+      }
+    });
+  }
+
+  Future<void> handleProfilePictureChange() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        profilePicture = File(pickedFile.path);
+        profilePicturePreview = pickedFile.path;
+      });
+    }
+  }
+
+  Future<void> handleCoverPictureChange() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.getImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() {
+        coverPicture = File(pickedFile.path);
+        coverPicturePreview = pickedFile.path;
+      });
+    }
+  }
+
+  Future<void> handleUpdateProfile() async {
+    // Handle updating the profile
+  }
 
   @override
   Widget build(BuildContext context) {
-    final userId = FirebaseAuth.instance.currentUser!.uid;
-
-    Future<Map<String, dynamic>> _loadUserData() async {
-      DocumentSnapshot docSnap = await FirebaseFirestore.instance.collection('users').doc(userId).get();
-      return docSnap.data() as Map<String, dynamic>;
-    }
-
-    Future _pickProfilePicture() async {
-      final pickedFile = await picker.getImage(source: ImageSource.gallery);
-      setState(() {
-        if (pickedFile != null) {
-          _profilePicture = File(pickedFile.path);
-        }
-      });
-    }
-
-    Future _pickCoverPicture() async {
-      final pickedFile = await picker.getImage(source: ImageSource.gallery);
-      setState(() {
-        if (pickedFile != null) {
-          _coverPicture = File(pickedFile.path);
-        }
-      });
-    }
-
-    Future<String?> _uploadImage(File image, String path) async {
-      if (image != null) {
-        final ref = FirebaseStorage.instance.ref(path);
-        await ref.putFile(image);
-        return await ref.getDownloadURL();
-      } else {
-        return null;
-      }
-    }
-
-    Future<void> _updateProfile() async {
-      setState(() {
-        _isLoading = true;
-      });
-
-      final values = _formKey.currentState!.value;
-      final displayName = values['displayName'];
-      final title = values['title'];
-      final bio = values['bio'];
-
-      final profilePicUrl = await _uploadImage(_profilePicture!, 'users/$userId/profilePicture');
-      final coverPicUrl = await _uploadImage(_coverPicture!, 'users/$userId/coverPicture');
-
-      await FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'displayName': displayName,
-        'title': title,
-        'bio': bio,
-        'profilePicture': profilePicUrl,
-        'coverPicture': coverPicUrl,
-      });
-
-      setState(() {
-        _isLoading = false;
-      });
-    }
-
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _loadUserData(),
-      builder: (ctx, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Center(child: CircularProgressIndicator());
-        }
-
-        final userData = snapshot.data as Map<String, dynamic>;
-
-        return Scaffold(
-          appBar: AppBar(title: Text('Update Profile')),
-          body: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(10),
-              child: FormBuilder(
-                key: _formKey,
-                initialValue: userData,
+    return Scaffold(
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: AssetImage('assets/background.jpg'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    GestureDetector(
-                      child: Image.network(userData['coverPicture']),
-                      onTap: _pickCoverPicture,
-                    ),
-                    GestureDetector(
-                      child: CircleAvatar(
-                        backgroundImage: NetworkImage(userData['profilePicture']),
+                    Text(
+                      'Update Profile',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
                       ),
-                      onTap: _pickProfilePicture,
                     ),
-                    FormBuilderTextField(
-                      name: 'displayName',
-                      decoration: InputDecoration(labelText: 'Display Name'),
-                    ),
-                    FormBuilderTextField(
-                      name: 'title',
-                      decoration: InputDecoration(labelText: 'Title'),
-                    ),
-                    FormBuilderTextField(
-                      name: 'bio',
-                      decoration: InputDecoration(labelText: 'Bio'),
-                    ),
-                    SizedBox(height: 10),
-                    _isLoading
-                        ? CircularProgressIndicator()
-                        : ElevatedButton(
-                      child: Text('Update Profile'),
-                      onPressed: _updateProfile,
+                    SizedBox(height: 16),
+                    Form(
+                      child: Column(
+                        children: [
+                          GestureDetector(
+                            onTap: handleCoverPictureChange,
+                            child: Image.file(
+                              coverPicture ?? File(''), // Use a placeholder file when coverPicture is null
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: 200,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          GestureDetector(
+                            onTap: handleProfilePictureChange,
+                            child: CircleAvatar(
+                              backgroundImage: profilePicture != null
+                                  ? FileImage(profilePicture!)
+                                  : null,
+                              radius: 70,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: displayNameController,
+                            decoration: InputDecoration(
+                              labelText: 'Display Name',
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: titleController,
+                            decoration: InputDecoration(
+                              labelText: 'Title',
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: bioController,
+                            maxLines: 4,
+                            decoration: InputDecoration(
+                              labelText: 'Bio',
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: handleUpdateProfile,
+                            child: Text('Update Profile'),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
               ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
   }
 }

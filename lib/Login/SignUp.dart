@@ -123,131 +123,117 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: Container(
-        decoration: BoxDecoration(
-        image: DecorationImage(
-        image: NetworkImage(
-        'https://i.ibb.co/6bJ0VFb/Background.jpg'),
-    fit: BoxFit.cover,
-    ),
-    ),
-    child: Center(
-    child: SingleChildScrollView(
-    child: Container(
-    width: MediaQuery.of(context).size.width * 0.4,
-    padding: EdgeInsets.all(16.0),
-    decoration: BoxDecoration(
-    color: Colors.white,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.2),
-          blurRadius: 5.0,
-          spreadRadius: 1.0,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Container(
+              padding: EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10.0),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.grey.withOpacity(0.2),
+                    blurRadius: 5.0,
+                    spreadRadius: 1.0,
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    'Student Registration',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20.0,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  SizedBox(height: 20.0),
+                  TextField(
+                    controller: _firstNameController,
+                    decoration: InputDecoration(
+                      labelText: 'First Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 10.0),
+                  TextField(
+                    controller: _lastNameController,
+                    decoration: InputDecoration(
+                      labelText: 'Last Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 10.0),
+                  TextField(
+                    controller: _phoneController,
+                    decoration: InputDecoration(
+                      labelText: 'Phone Number',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 10.0),
+                  TextField(
+                    controller: _emailController,
+                    decoration: InputDecoration(
+                      labelText: 'Enter Email',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 10.0),
+                  TextField(
+                    controller: _passwordController,
+                    decoration: InputDecoration(
+                      labelText: 'Enter Password',
+                      border: OutlineInputBorder(),
+                    ),
+                    obscureText: true,
+                  ),
+                  SizedBox(height: 20.0),
+                  ElevatedButton(
+                    onPressed: _isLoading ? null : _signUp,
+                    child: _isLoading
+                        ? CircularProgressIndicator(
+                      color: Colors.white,
+                    )
+                        : Text(
+                      'Register',
+                      style: TextStyle(
+                        fontSize: 18.0,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ButtonStyle(
+                      backgroundColor:
+                      MaterialStateProperty.all<Color>(Colors.teal),
+                      minimumSize: MaterialStateProperty.all<Size>(
+                        Size(double.infinity, 45.0),
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 10.0),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, '/');
+                    },
+                    child: Text(
+                      'Back to login page',
+                      style: TextStyle(
+                        decoration: TextDecoration.underline,
+                        color: Colors.teal,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-      ],
-    ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            'EduShare',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-              fontSize: 24.0,
-            ),
-          ),
-          SizedBox(height: 10.0),
-          Text(
-            '( Student Registration )',
-            style: TextStyle(
-              color: Colors.black87,
-              fontWeight: FontWeight.bold,
-              fontSize: 18.0,
-            ),
-          ),
-          SizedBox(height: 20.0),
-          TextField(
-            controller: _firstNameController,
-            decoration: InputDecoration(
-              labelText: 'First Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          SizedBox(height: 10.0),
-          TextField(
-            controller: _lastNameController,
-            decoration: InputDecoration(
-              labelText: 'Last Name',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          SizedBox(height: 10.0),
-          TextField(
-            controller: _phoneController,
-            decoration: InputDecoration(
-              labelText: 'Phone Number',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          SizedBox(height: 10.0),
-          TextField(
-            controller: _emailController,
-            decoration: InputDecoration(
-              labelText: 'Enter Email',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          SizedBox(height: 10.0),
-          TextField(
-            controller: _passwordController,
-            decoration: InputDecoration(
-              labelText: 'Enter Password',
-              border: OutlineInputBorder(),
-            ),
-            obscureText: true,
-          ),
-          SizedBox(height: 20.0),
-          ElevatedButton(
-            onPressed: _isLoading ? null : _signUp,
-            child: _isLoading
-                ? CircularProgressIndicator(
-              color: Colors.white,
-            )
-                : Text(
-              'Register',
-              style: TextStyle(
-                fontSize: 18.0,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ButtonStyle(
-              backgroundColor:
-              MaterialStateProperty.all<Color>(Colors.teal),
-              minimumSize: MaterialStateProperty.all<Size>(
-                Size(double.infinity, 45.0),
-              ),
-            ),
-          ),
-          SizedBox(height: 10.0),
-          GestureDetector(
-            onTap: () {
-              Navigator.pushNamed(context, '/');
-            },
-            child: Text(
-              'Back to login page',
-              style: TextStyle(
-                decoration: TextDecoration.underline,
-                color: Colors.teal,
-              ),
-            ),
-          ),
-        ],
       ),
-    ),
-    ),
-    ),
-        ),
     );
   }
 }

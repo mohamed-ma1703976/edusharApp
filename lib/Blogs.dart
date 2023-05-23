@@ -16,8 +16,8 @@ class BlogsPage extends StatefulWidget {
 
 class _BlogsPageState extends State<BlogsPage> {
   final Stream<QuerySnapshot> _blogsStream =
-  FirebaseFirestore.instance.collection('Blog').snapshots();
-
+  _firestore.collection('Blog').snapshots();
+  final _instructors = ValueNotifier<Map<String, DocumentSnapshot>>({});
   bool _isLoading = true;
   final _filteredBlogs = ValueNotifier<List<DocumentSnapshot>>([]);
 
@@ -25,6 +25,7 @@ class _BlogsPageState extends State<BlogsPage> {
   void initState() {
     super.initState();
     _loadImages();
+    _fetchInstructors();
   }
 
   Future<void> _loadImages() async {
@@ -32,6 +33,13 @@ class _BlogsPageState extends State<BlogsPage> {
     setState(() {
       _isLoading = false;
     });
+  }
+
+  Future<void> _fetchInstructors() async {
+    final instructorDocs = await _firestore.collection('Instructor').get();
+    _instructors.value = Map.fromEntries(
+      instructorDocs.docs.map((doc) => MapEntry(doc.id, doc)),
+    );
   }
 
   @override
@@ -50,60 +58,66 @@ class _BlogsPageState extends State<BlogsPage> {
         final blogs = snapshot.data!.docs;
         _filteredBlogs.value = blogs;
 
-        return Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: TextField(
-                onChanged: (value) {
-                  _filteredBlogs.value = blogs.where((blog) {
-                    final blogData = blog.data() as Map<String, dynamic>;
-                    final blogTitle = blogData['Title'] as String;
-                    return blogTitle.toLowerCase().contains(value.toLowerCase());
-                  }).toList();
-                },
-                decoration: InputDecoration(
-                  labelText: 'Search blogs',
-                  hintText: 'Search blogs',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.all(Radius.circular(25.0)),
+        return ValueListenableBuilder<Map<String, DocumentSnapshot>>(
+          valueListenable: _instructors,
+          builder: (BuildContext context, Map<String, DocumentSnapshot> instructors, Widget? child) {
+            return Column(
+              children: [
+                Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: TextField(
+                    onChanged: (value) {
+                      _filteredBlogs.value = blogs.where((blog) {
+                        final blogData = blog.data() as Map<String, dynamic>;
+                        final blogTitle = blogData['Title'] as String;
+                        return blogTitle.toLowerCase().contains(value.toLowerCase());
+                      }).toList();
+                    },
+                    decoration: InputDecoration(
+                      labelText: 'Search blogs',
+                      hintText: 'Search blogs',
+                      prefixIcon: Icon(Icons.search),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.all(Radius.circular(25.0)),
+                      ),
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: ValueListenableBuilder<List<DocumentSnapshot>>(
-                valueListenable: _filteredBlogs,
-                builder: (BuildContext context, List<DocumentSnapshot> blogs, Widget? child) {
-                  return AnimationLimiter(
-                    child: ListView.builder(
-                      itemCount: blogs.length,
-                      itemBuilder: (BuildContext context, int index) {
-                        final blog = blogs[index];
-                        return AnimationConfiguration.staggeredList(
-                          position: index,
-                          duration: const Duration(milliseconds: 500),
-                          child: SlideAnimation(
-                            verticalOffset: 50.0,
-                            child: FadeInAnimation(
-                              child: _isLoading
-                                  ? _buildLoadingCard()
-                                  : BlogCard(blog: blog),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+                Expanded(
+                  child: ValueListenableBuilder<List<DocumentSnapshot>>(
+                    valueListenable: _filteredBlogs,
+                    builder: (BuildContext context, List<DocumentSnapshot> blogs, Widget? child) {
+                      return AnimationLimiter(
+                        child: ListView.builder(
+                          itemCount: blogs.length,
+                          itemBuilder: (BuildContext context, int index) {
+                            final blog = blogs[index];
+                            return AnimationConfiguration.staggeredList(
+                              position: index,
+                              duration: const Duration(milliseconds: 500),
+                              child: SlideAnimation(
+                                verticalOffset: 50.0,
+                                child: FadeInAnimation(
+                                  child: _isLoading
+                                      ? _buildLoadingCard()
+                                      : BlogCard(blog: blog, instructor: instructors[blog.get('AuthorId')]),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
   }
+
   Widget _buildLoadingCard() {
     return Card(
       child: Container(
@@ -123,31 +137,22 @@ class _BlogsPageState extends State<BlogsPage> {
 
 class BlogCard extends StatefulWidget {
   final DocumentSnapshot blog;
+  final DocumentSnapshot? instructor;
 
-  BlogCard({required this.blog});
+  BlogCard({required this.blog, this.instructor});
 
   @override
   _BlogCardState createState() => _BlogCardState();
 }
 
 class _BlogCardState extends State<BlogCard> {
-  final CollectionReference instructorCollectionRef =
-  FirebaseFirestore.instance.collection('Instructor');
-  late Future<DocumentSnapshot> futureInstructor;
-
-  @override
-  void initState() {
-    super.initState();
-    String instructorId = widget.blog.get('AuthorId') ?? '';
-    if (instructorId.isNotEmpty) {
-      futureInstructor = instructorCollectionRef.doc(instructorId).get();
-    } else {
-      futureInstructor = Future.value(null);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    String instructorName = widget.instructor?.get('displayName') ?? 'Unknown';
+    String blogTitle = widget.blog.get('Title') as String? ?? 'Unknown Title';
+    String imageUrl = widget.blog.get('img') as String? ?? '';
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -157,67 +162,46 @@ class _BlogCardState extends State<BlogCard> {
           ),
         );
       },
-      child: FutureBuilder<DocumentSnapshot>(
-        future: futureInstructor,
-        builder: (BuildContext context, AsyncSnapshot<DocumentSnapshot> snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingCard();
-          }
-          Map<String, dynamic>? instructorData =
-          snapshot.data?.data() as Map<String, dynamic>?;
-
-          String instructorName =
-              instructorData?['displayName'] as String? ?? 'Unknown';
-          String blogTitle = widget.blog.get('Title') as String? ?? 'Unknown Title';
-          String imageUrl = widget.blog.get('img') as String? ?? '';
-
-          return Card(
-            elevation: 5,
-            margin: EdgeInsets.all(10),
-            child: Padding(
-              padding: EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    blogTitle,
-                    style: TextStyle(
-                      fontSize: 20.0,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  SizedBox(height: 10.0),
-                  CachedNetworkImage(
-                    imageUrl: imageUrl,
-                    placeholder: (context, url) => _buildLoadingImage(),
-                    errorWidget: (context, url, error) => Icon(Icons.error),
-                    height: 200,
-                    width: 500,
-                    fit: BoxFit.cover,
-                  ),
-                  SizedBox(height: 10.0),
-                  Text(
-                    'Instructor: $instructorName',
-                    style: TextStyle(
-                      fontSize: 16.0,
-                      color: Colors.grey[700],
-                    ),
-                  ),
-                ],
+      child: Card(
+        elevation: 5,
+        margin: EdgeInsets.all(10),
+        child: Padding(
+          padding: EdgeInsets.all(10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text(
+                blogTitle,
+                style: TextStyle(
+                  fontSize: 20.0,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          );
-        },
+              SizedBox(height: 10.0),
+              CachedNetworkImage(
+                imageUrl: imageUrl,
+                placeholder: (context, url) => _buildLoadingImage(),
+                errorWidget: (context, url, error) => Icon(Icons.error),
+                height: 200,
+                width: 500,
+                fit: BoxFit.cover,
+              ),
+              SizedBox(height: 10.0),
+              Text(
+                'Instructor: $instructorName',
+                style: TextStyle(
+                  fontSize: 16.0,
+                  color: Colors.grey[700],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
-
 
   Widget _buildLoadingCard() {
     return Card(
